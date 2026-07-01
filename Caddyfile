@@ -1,0 +1,6 @@
+{$DOMAIN} {
+	basicauth {
+		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+	}
+	reverse_proxy app:3001
+}

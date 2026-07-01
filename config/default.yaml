@@ -1,0 +1,146 @@
+symbol:
+  screener: crypto
+  exchange: BITSTAMP
+  ticker: BTCUSD
+
+timeframes:
+  - 1m
+  - 5m
+  - 15m
+  - 30m
+  - 1h
+  - 2h
+  - 4h
+  - 1d
+  - 1W
+  - 1M
+
+predictions:
+  horizons: [5m, 15m, 1h]
+  noEdgeThreshold: 0.1
+  highConfidenceThreshold: 0.35
+  mediumConfidenceThreshold: 0.15
+  weights: {}
+
+refresh:
+  dashboardPollSeconds: 15
+  backgroundRefreshSeconds: 60
+  requestDelayMs: 1500
+  manualRefreshCooldownSeconds: 60
+  priorityTimeframes: [1m, 5m, 15m, 30m, 1h]
+  cacheTtlSeconds:
+    1m: 60
+    5m: 60
+    15m: 90
+    30m: 300
+    1h: 600
+    2h: 900
+    4h: 1200
+    1d: 1800
+    1W: 3600
+    1M: 7200
+
+agreementRules:
+  - id: summary_bull_majority
+    name: Summary Bull Majority
+    enabled: false
+    type: gauge_majority
+    gauge: summary
+    matchDirections:
+      - BUY
+      - STRONG_BUY
+    minMatchingTimeframes: 6
+
+  - id: summary_bear_majority
+    name: Summary Bear Majority
+    enabled: false
+    type: gauge_majority
+    gauge: summary
+    matchDirections:
+      - SELL
+      - STRONG_SELL
+    minMatchingTimeframes: 6
+
+  - id: triple_align_daily
+    name: Daily Triple Align
+    enabled: false
+    type: all_gauges_align
+    timeframes:
+      - 1d
+    matchDirections:
+      - SELL
+      - STRONG_SELL
+      - BUY
+      - STRONG_BUY
+
+  - id: 5m_confluence_bull
+    name: 5m Bull Confluence
+    enabled: true
+    type: gauge_majority
+    gauge: summary
+    matchDirections:
+      - BUY
+      - STRONG_BUY
+    minMatchingTimeframes: 3
+    requireSpecificTimeframes: [1m, 5m, 15m]
+
+  - id: 5m_confluence_bear
+    name: 5m Bear Confluence
+    enabled: true
+    type: gauge_majority
+    gauge: summary
+    matchDirections:
+      - SELL
+      - STRONG_SELL
+    minMatchingTimeframes: 3
+    requireSpecificTimeframes: [1m, 5m, 15m]
+
+  - id: 15m_confluence_bull
+    name: 15m Bull Confluence
+    enabled: true
+    type: gauge_majority
+    gauge: summary
+    matchDirections:
+      - BUY
+      - STRONG_BUY
+    minMatchingTimeframes: 3
+    requireSpecificTimeframes: [5m, 15m, 30m]
+
+  - id: 15m_confluence_bear
+    name: 15m Bear Confluence
+    enabled: true
+    type: gauge_majority
+    gauge: summary
+    matchDirections:
+      - SELL
+      - STRONG_SELL
+    minMatchingTimeframes: 3
+    requireSpecificTimeframes: [5m, 15m, 30m]
+
+  - id: 1h_confluence_bull
+    name: 1h Bull Confluence
+    enabled: true
+    type: gauge_majority
+    gauge: summary
+    matchDirections:
+      - BUY
+      - STRONG_BUY
+    minMatchingTimeframes: 3
+    requireSpecificTimeframes: [15m, 30m, 1h]
+
+  - id: 1h_confluence_bear
+    name: 1h Bear Confluence
+    enabled: true
+    type: gauge_majority
+    gauge: summary
+    matchDirections:
+      - SELL
+      - STRONG_SELL
+    minMatchingTimeframes: 3
+    requireSpecificTimeframes: [15m, 30m, 1h]
+
+polymarket:
+  enabled: true
+  historyLimit: 50
+  historyPath: data/polymarket-windows.json
+  syncIntervalSeconds: 30

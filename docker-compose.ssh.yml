@@ -1,0 +1,6 @@
+# SSH-only access — app listens on localhost inside the Droplet (not public).
+# Usage: docker compose -f docker-compose.yml -f docker-compose.ssh.yml up -d app --build
+services:
+  app:
+    ports:
+      - "127.0.0.1:${PORT:-3001}:3001"
