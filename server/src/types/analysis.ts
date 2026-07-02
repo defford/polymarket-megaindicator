@@ -100,6 +100,8 @@ export interface PolymarketConfig {
   historyLimit: number;
   historyPath: string;
   syncIntervalSeconds: number;
+  indicatorSnapshotsPath: string;
+  indicatorSnapshotLimit: number;
 }
 
 export interface AppConfig {

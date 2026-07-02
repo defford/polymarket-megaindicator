@@ -299,3 +299,7 @@ export const MA_VALUE_KEYS: Record<string, string> = {
 };
 
 export { OSCILLATOR_LABELS, MA_LABELS };
+
+export const OSCILLATOR_INDICATOR_IDS = Object.keys(OSCILLATOR_LABELS);
+export const MA_INDICATOR_IDS = Object.keys(MA_LABELS);
+export const ALL_INDICATOR_IDS = [...OSCILLATOR_INDICATOR_IDS, ...MA_INDICATOR_IDS];

@@ -28,6 +28,8 @@ import {
   getWindowStartTs,
   inferPriceSource,
 } from "./slugUtils.js";
+import { buildWindowIndicatorSnapshot } from "./buildIndicatorSnapshot.js";
+import { IndicatorSnapshotStore } from "./indicatorSnapshotStore.js";
 import { WindowHistoryStore } from "./windowHistoryStore.js";
 
 const HORIZONS: PredictionHorizon[] = ["5m", "15m", "1h"];
@@ -36,6 +38,8 @@ const DEFAULT_POLYMARKET: PolymarketConfig = {
   historyLimit: 50,
   historyPath: "data/polymarket-windows.json",
   syncIntervalSeconds: 30,
+  indicatorSnapshotsPath: "data/indicator-snapshots.json",
+  indicatorSnapshotLimit: 500,
 };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -146,10 +150,12 @@ export class WindowHistoryService {
   private client = new PolymarketClient();
   private priceTracker = new PriceTracker();
   private store: WindowHistoryStore;
+  private snapshotStore: IndicatorSnapshotStore;
   private config: PolymarketConfig;
   private syncTimer: ReturnType<typeof setInterval> | null = null;
   private activeWindows: Partial<Record<PredictionHorizon, PolymarketWindowResult>> = {};
   private capturedProfileSignals = new Map<string, ProfileDirections>();
+  private capturedSnapshotSlugs = new Set<string>();
   private started = false;
 
   constructor(
@@ -161,6 +167,11 @@ export class WindowHistoryService {
       resolveHistoryPath(this.config.historyPath),
       this.config.historyLimit
     );
+    this.snapshotStore = new IndicatorSnapshotStore(
+      resolveHistoryPath(this.config.indicatorSnapshotsPath),
+      this.config.indicatorSnapshotLimit
+    );
+    this.capturedSnapshotSlugs = this.snapshotStore.getSlugs();
   }
 
   private getPolymarketConfig(): PolymarketConfig {
@@ -213,6 +224,31 @@ export class WindowHistoryService {
       activeWindows,
       updatedAt: this.store.getUpdatedAt(),
     };
+  }
+
+  private maybeCaptureIndicatorSnapshot(
+    slug: string,
+    horizon: PredictionHorizon,
+    windowStart: string,
+    windowEnd: string
+  ): void {
+    if (this.capturedSnapshotSlugs.has(slug) || this.snapshotStore.has(slug)) {
+      this.capturedSnapshotSlugs.add(slug);
+      return;
+    }
+
+    const analyses = this.dataService.getCachedAnalyses();
+    if (analyses.length === 0) return;
+
+    const snapshot = buildWindowIndicatorSnapshot(
+      slug,
+      horizon,
+      windowStart,
+      windowEnd,
+      analyses
+    );
+    this.snapshotStore.upsert(snapshot);
+    this.capturedSnapshotSlugs.add(slug);
   }
 
   private captureAllProfileDirections(horizon: PredictionHorizon): ProfileDirections {
@@ -325,6 +361,12 @@ export class WindowHistoryService {
         );
         this.activeWindows[horizon] = activeResult;
         this.store.upsert(activeResult);
+        this.maybeCaptureIndicatorSnapshot(
+          currentSlug,
+          horizon,
+          currentMarket.windowStart,
+          currentMarket.windowEnd
+        );
       }
 
       for (const row of unresolvedPast) {

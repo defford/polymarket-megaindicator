@@ -3,7 +3,7 @@ import type { PolymarketWindowResult } from "../types/polymarket";
 import { getProfileSignal } from "../types/polymarket";
 import { horizonLabel } from "../predictionUtils";
 import { CollapsibleSection } from "./CollapsibleSection";
-import { ResultTimelineChart } from "./ResultTimelineChart";
+import { ResultAccuracyCard } from "./ResultAccuracyCard";
 
 interface PredictionResultFeedProps {
   selectedHorizon: PredictionHorizon;
@@ -63,13 +63,12 @@ export function PredictionResultFeed({
     <section className="panel result-feed-panel">
       <h2>Polymarket Results</h2>
       <p className="panel-hint">
-        Cumulative score charts: Up/Higher = +1, Down/Lower = -1. Prediction accuracy reflects the
-        selected hypothesis profile&apos;s signal captured at window open (not NO_EDGE). Older windows
-        may only have data for profiles captured after this feature was enabled. Prices from
-        Polymarket RTDS (Chainlink for 5m/15m, Binance for 1h).
+        Prediction accuracy is the share of correct HIGHER/LOWER calls for the selected hypothesis
+        profile at window open. NO_EDGE and missing signals are excluded. Prices from Polymarket RTDS
+        (Chainlink for 5m/15m, Binance for 1h).
       </p>
 
-      <ResultTimelineChart
+      <ResultAccuracyCard
         horizon={selectedHorizon}
         windows={windows}
         profileId={selectedProfile}

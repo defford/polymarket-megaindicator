@@ -1,0 +1,6 @@
+# Use with pre-built dist/ folders (see scripts/deploy-to-droplet.sh).
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.runtime

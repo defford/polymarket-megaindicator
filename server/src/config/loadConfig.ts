@@ -23,6 +23,8 @@ const DEFAULT_POLYMARKET = {
   historyLimit: 50,
   historyPath: "data/polymarket-windows.json",
   syncIntervalSeconds: 30,
+  indicatorSnapshotsPath: "data/indicator-snapshots.json",
+  indicatorSnapshotLimit: 500,
 };
 
 export function normalizeConfig(config: AppConfig): AppConfig {

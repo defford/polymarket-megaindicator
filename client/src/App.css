@@ -1196,170 +1196,53 @@ h3 {
   text-decoration: underline;
 }
 
-.timeline-chart {
+.result-accuracy-card {
   background: #131722;
   border: 1px solid #2a2e39;
-  border-radius: 6px;
-  padding: 0.65rem 0.75rem;
-  margin-bottom: 0.25rem;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
 }
 
-.timeline-chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0.5rem;
-  margin-bottom: 0.35rem;
-  flex-wrap: wrap;
+.result-accuracy-header {
+  margin-bottom: 0.5rem;
 }
 
-.timeline-chart-title {
+.result-accuracy-title {
   font-size: 0.85rem;
   font-weight: 600;
   color: #fff;
 }
 
-.timeline-chart-totals {
-  font-size: 0.72rem;
-  color: #787b86;
+.result-accuracy-empty {
+  font-size: 0.85rem;
+  margin: 0.25rem 0 0;
 }
 
-.timeline-chart-empty {
-  font-size: 0.78rem;
-  margin: 0.5rem 0 0;
+.result-accuracy-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
 }
 
-.timeline-chart-svg {
-  width: 100%;
-  height: auto;
-  display: block;
+.result-accuracy-good {
+  color: #089981;
 }
 
-.timeline-zero-line {
-  stroke: #434651;
-  stroke-width: 1;
-  stroke-dasharray: 4 3;
+.result-accuracy-poor {
+  color: #f23645;
 }
 
-.timeline-line {
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.result-accuracy-detail {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: #d1d4dc;
 }
 
-.timeline-line-result {
-  stroke: #089981;
-}
-
-.timeline-line-prediction {
-  stroke: #2962ff;
-}
-
-.timeline-axis-label {
-  fill: #787b86;
-  font-size: 9px;
-}
-
-.timeline-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-  margin-top: 0.4rem;
-}
-
-.timeline-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.68rem;
-  color: #787b86;
-}
-
-.timeline-legend-swatch {
-  display: inline-block;
-  width: 14px;
-  height: 2px;
-  border-radius: 1px;
-}
-
-.timeline-marker-ring {
-  stroke-width: 2;
-}
-
-.timeline-marker-match .timeline-marker-ring {
-  fill: #0d2b24;
-  stroke: #089981;
-}
-
-.timeline-marker-miss .timeline-marker-ring {
-  fill: #3d1f24;
-  stroke: #f23645;
-}
-
-.timeline-marker-no-edge .timeline-marker-ring {
-  fill: #2a2a1f;
-  stroke: #787b86;
-}
-
-.timeline-marker-no-signal .timeline-marker-ring {
-  fill: #1e222d;
-  stroke: #434651;
-}
-
-.timeline-signal-tag {
-  fill: #d1d4dc;
-  font-size: 6px;
-  font-weight: 600;
-  pointer-events: none;
-}
-
-.timeline-marker-match .timeline-signal-tag {
-  fill: #089981;
-}
-
-.timeline-marker-miss .timeline-signal-tag {
-  fill: #f23645;
-}
-
-.timeline-marker-no-edge .timeline-signal-tag {
-  fill: #787b86;
-}
-
-.timeline-marker-no-signal .timeline-signal-tag {
-  fill: #434651;
-}
-
-.timeline-marker-label {
-  fill: #fff;
-  font-size: 7px;
-  font-weight: 700;
-  pointer-events: none;
-}
-
-.timeline-legend-swatch.timeline-marker-match {
-  background: #089981;
-}
-
-.timeline-legend-swatch.timeline-marker-miss {
-  background: #f23645;
-}
-
-.timeline-legend-swatch.timeline-marker-no-edge {
-  background: #787b86;
-}
-
-.timeline-legend-swatch.timeline-marker-no-signal {
-  background: #434651;
-}
-
-.timeline-chart-svg-labeled {
-  height: auto;
-  min-height: 200px;
-}
-
-.timeline-chart-note {
+.result-accuracy-note {
   font-size: 0.75rem;
-  margin: 0.5rem 0 0;
+  margin: 0.65rem 0 0;
   line-height: 1.4;
 }
 

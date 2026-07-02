@@ -85,6 +85,8 @@ npm run dev
 - Dashboard: http://localhost:5173
 - API: http://localhost:3001/api/snapshot
 
+For a local-first testing workflow (including one-command backend smoke tests), see [`TESTING_LOCAL.md`](TESTING_LOCAL.md).
+
 ## Production
 
 ```bash
@@ -148,6 +150,18 @@ docker --version
 
 #### 4. Deploy the app
 
+**512 MB Droplets:** `docker compose ... --build` often fails during `vite build` (OOM killed). Build on your Mac instead:
+
+```bash
+# On your Mac, in the project folder
+chmod +x scripts/deploy-to-droplet.sh
+./scripts/deploy-to-droplet.sh root@<droplet-public-ip>
+```
+
+This compiles locally, syncs `dist/` folders, and runs a lightweight Docker image on the server (~1–2 min).
+
+**1 GB+ Droplets** can build on the server:
+
 ```bash
 git clone <repo-url> btc-mega-indicator
 cd btc-mega-indicator
@@ -156,9 +170,9 @@ docker compose -f docker-compose.yml -f docker-compose.ssh.yml up -d app --build
 docker compose logs -f app
 ```
 
-No `.env` file or domain needed. Caddy is not started — only the app container runs, bound to `127.0.0.1:3001` on the Droplet.
+For updates after code changes, re-run `deploy-to-droplet.sh` from your Mac (or `git pull` + server build on larger Droplets).
 
-Wait until logs show `Server running on http://localhost:3001` and background refresh activity.
+No `.env` file or domain needed. Caddy is not started — only the app container runs, bound to `127.0.0.1:3001` on the Droplet.
 
 #### 5. Access the dashboard from your Mac
 
@@ -314,6 +328,13 @@ Edit [`config/default.yaml`](config/default.yaml):
 3. Verify 5m/15m/1h cards show HIGHER, LOWER, or NO EDGE with confidence tiers.
 4. Compare anchor timeframe summary against the live [TradingView technicals page](https://www.tradingview.com/symbols/BTCUSD/technicals/).
 5. Trigger `POST /api/refresh?priorityOnly=true` and confirm faster refresh (~8s).
+
+Quick automated local checks:
+
+```bash
+npm run smoke:server   # backend health + snapshot shape
+npm run check:local    # full build + smoke test
+```
 
 ## Project Structure
 
