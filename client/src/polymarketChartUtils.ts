@@ -17,7 +17,32 @@ export interface TimelineStats {
   tracked: number;
   correct: number;
   wrong: number;
+  noEdge: number;
   noSignal: number;
+}
+
+export function formatSignalShort(direction: PredictionDirection | null): string {
+  if (direction === "HIGHER") return "HIGHER";
+  if (direction === "LOWER") return "LOWER";
+  if (direction === "NO_EDGE") return "NO EDGE";
+  return "—";
+}
+
+export function formatPointMarkerLabel(point: TimelinePoint): string {
+  const signal = formatSignalShort(point.signalDirection);
+  if (!point.signalDirection) return `${signal}`;
+  if (point.signalDirection === "NO_EDGE") return signal;
+  if (point.signalCorrect == null) return signal;
+  return `${signal} ${point.signalCorrect ? "✓" : "✗"}`;
+}
+
+export function getPointMarkerKind(
+  point: TimelinePoint
+): "match" | "miss" | "no-edge" | "no-signal" {
+  if (!point.signalDirection) return "no-signal";
+  if (point.signalDirection === "NO_EDGE") return "no-edge";
+  if (point.signalCorrect == null) return "no-signal";
+  return point.signalCorrect ? "match" : "miss";
 }
 
 export function buildTimelineSeries(
@@ -34,6 +59,7 @@ export function buildTimelineSeries(
   let hasPrediction = false;
   let correct = 0;
   let wrong = 0;
+  let noEdge = 0;
   let noSignal = 0;
 
   const points = resolved.map((window) => {
@@ -49,6 +75,11 @@ export function buildTimelineSeries(
       pointPrediction = predictionScore;
       if (signalCorrect) correct++;
       else wrong++;
+    } else if (direction === "NO_EDGE") {
+      noEdge++;
+      if (hasPrediction) {
+        pointPrediction = predictionScore;
+      }
     } else {
       noSignal++;
       if (hasPrediction) {
@@ -72,6 +103,7 @@ export function buildTimelineSeries(
     tracked: correct + wrong,
     correct,
     wrong,
+    noEdge,
     noSignal,
   };
 }

@@ -5,7 +5,9 @@ import {
   buildPolyline,
   buildTimelineSeries,
   formatMatchTooltip,
+  formatPointMarkerLabel,
   getDefaultChartLayout,
+  getPointMarkerKind,
   scaleLinear,
 } from "../polymarketChartUtils";
 
@@ -26,18 +28,18 @@ export function ResultTimelineChart({
   profileId,
   profileName,
 }: ResultTimelineChartProps) {
-  const { points: series, tracked, correct, wrong, noSignal } = buildTimelineSeries(
+  const { points: series, tracked, correct, wrong, noEdge, noSignal } = buildTimelineSeries(
     windows,
     profileId
   );
 
-  if (series.length < 2) {
+  if (series.length === 0) {
     return (
       <div className="timeline-chart">
         <div className="timeline-chart-header">
           <span className="timeline-chart-title">{horizonLabel(horizon)}</span>
         </div>
-        <p className="muted timeline-chart-empty">Need at least 2 resolved windows.</p>
+        <p className="muted timeline-chart-empty">No resolved windows yet.</p>
       </div>
     );
   }
@@ -48,8 +50,8 @@ export function ResultTimelineChart({
   const plotH = height - padding.top - padding.bottom;
 
   const times = series.map((p) => p.time);
-  const tMin = times[0];
-  const tMax = times[times.length - 1];
+  const tMin = times.length === 1 ? times[0] - 60000 : times[0];
+  const tMax = times.length === 1 ? times[0] + 60000 : times[times.length - 1];
 
   const yValues = series.flatMap((p) =>
     p.predictionScore != null ? [p.resultScore, p.predictionScore] : [p.resultScore]
@@ -94,7 +96,7 @@ export function ResultTimelineChart({
       </div>
 
       <svg
-        className="timeline-chart-svg"
+        className="timeline-chart-svg timeline-chart-svg-labeled"
         viewBox={`0 0 ${width} ${height}`}
         role="img"
         aria-label={`${horizonLabel(horizon)} cumulative result and prediction scores`}
@@ -113,8 +115,10 @@ export function ResultTimelineChart({
           </text>
         )}
 
-        <path d={buildPolyline(resultPoints)} className="timeline-line timeline-line-result" fill="none" />
-        {tracked > 0 && (
+        {series.length >= 2 && (
+          <path d={buildPolyline(resultPoints)} className="timeline-line timeline-line-result" fill="none" />
+        )}
+        {tracked > 0 && series.length >= 2 && (
           <path
             d={buildPolyline(predictionPoints, true)}
             className="timeline-line timeline-line-prediction"
@@ -125,23 +129,16 @@ export function ResultTimelineChart({
         {series.map((point) => {
           const x = xScale(point.time);
           const y = yScale(point.resultScore);
-          const hasTrackedSignal =
-            point.signalDirection != null &&
-            point.signalDirection !== "NO_EDGE" &&
-            point.signalCorrect != null;
-
-          if (!hasTrackedSignal) return null;
-
-          const markerClass = point.signalCorrect
-            ? "timeline-marker timeline-marker-match"
-            : "timeline-marker timeline-marker-miss";
+          const kind = getPointMarkerKind(point);
+          const markerClass = `timeline-marker timeline-marker-${kind}`;
+          const label = formatPointMarkerLabel(point);
 
           return (
             <g key={point.time} className={markerClass}>
-              <circle cx={x} cy={y} r={5} className="timeline-marker-ring" />
-              <text x={x} y={y + 3.5} className="timeline-marker-label" textAnchor="middle">
-                {point.signalCorrect ? "✓" : "✗"}
+              <text x={x} y={y - 10} className="timeline-signal-tag" textAnchor="middle">
+                {label}
               </text>
+              <circle cx={x} cy={y} r={5} className="timeline-marker-ring" />
               <title>{formatMatchTooltip(point)}</title>
             </g>
           );
@@ -175,20 +172,26 @@ export function ResultTimelineChart({
         <span className="timeline-legend-item">
           <span className="timeline-legend-swatch timeline-marker-miss" /> Miss ({wrong})
         </span>
+        <span className="timeline-legend-item">
+          <span className="timeline-legend-swatch timeline-marker-no-edge" /> No edge ({noEdge})
+        </span>
+        <span className="timeline-legend-item">
+          <span className="timeline-legend-swatch timeline-marker-no-signal" /> No signal ({noSignal})
+        </span>
       </div>
 
-      {tracked === 0 ? (
+      {tracked === 0 && noEdge === 0 ? (
         <p className="muted timeline-chart-note">
-          No signal markers yet for this profile — the server records all 12 hypothesis signals when
-          each window opens. Markers appear after the server has been running across new windows.
+          Resolved windows are shown, but no signals were captured yet. After redeploying the latest
+          server, leave it running across new windows — signals are saved at window open.
         </p>
-      ) : noSignal > 0 ? (
+      ) : (
         <p className="muted timeline-chart-note">
-          {tracked} window{tracked === 1 ? "" : "s"} with signal markers ({correct} match
-          {correct === 1 ? "" : "es"}, {wrong} miss{wrong === 1 ? "" : "es"}). {noSignal} older
-          window{noSignal === 1 ? "" : "s"} have no captured signal.
+          Each point shows the signal at window open and whether it matched the outcome. Prediction
+          score only moves on HIGHER/LOWER calls ({correct} match{correct === 1 ? "" : "es"},{" "}
+          {wrong} miss{wrong === 1 ? "" : "es"}).
         </p>
-      ) : null}
+      )}
     </div>
   );
 }

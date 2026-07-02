@@ -318,21 +318,27 @@ export class WindowHistoryService {
           existingActive?.slug === currentSlug ? existingActive.signalDirection : null,
           true
         );
-        this.activeWindows[horizon] = this.buildResultFromMarket(
+        const activeResult = this.buildResultFromMarket(
           currentMarket,
           true,
           profileDirections
         );
+        this.activeWindows[horizon] = activeResult;
+        this.store.upsert(activeResult);
       }
 
       for (const row of unresolvedPast) {
         const market = await this.client.fetchMarketBySlug(row.slug, horizon);
         if (market) {
+          const activeRow = this.activeWindows[horizon];
+          const existingSignals =
+            row.profileSignals ??
+            (activeRow?.slug === row.slug ? activeRow.profileSignals : undefined);
           const profileDirections = this.resolveProfileDirections(
             row.slug,
             horizon,
-            row.profileSignals,
-            row.signalDirection,
+            existingSignals,
+            row.signalDirection ?? activeRow?.signalDirection,
             false
           );
           this.store.upsert(this.buildResultFromMarket(market, false, profileDirections));

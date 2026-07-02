@@ -1296,6 +1296,39 @@ h3 {
   stroke: #f23645;
 }
 
+.timeline-marker-no-edge .timeline-marker-ring {
+  fill: #2a2a1f;
+  stroke: #787b86;
+}
+
+.timeline-marker-no-signal .timeline-marker-ring {
+  fill: #1e222d;
+  stroke: #434651;
+}
+
+.timeline-signal-tag {
+  fill: #d1d4dc;
+  font-size: 6px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.timeline-marker-match .timeline-signal-tag {
+  fill: #089981;
+}
+
+.timeline-marker-miss .timeline-signal-tag {
+  fill: #f23645;
+}
+
+.timeline-marker-no-edge .timeline-signal-tag {
+  fill: #787b86;
+}
+
+.timeline-marker-no-signal .timeline-signal-tag {
+  fill: #434651;
+}
+
 .timeline-marker-label {
   fill: #fff;
   font-size: 7px;
@@ -1309,6 +1342,19 @@ h3 {
 
 .timeline-legend-swatch.timeline-marker-miss {
   background: #f23645;
+}
+
+.timeline-legend-swatch.timeline-marker-no-edge {
+  background: #787b86;
+}
+
+.timeline-legend-swatch.timeline-marker-no-signal {
+  background: #434651;
+}
+
+.timeline-chart-svg-labeled {
+  height: auto;
+  min-height: 200px;
 }
 
 .timeline-chart-note {
