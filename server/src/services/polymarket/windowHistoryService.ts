@@ -35,11 +35,11 @@ import { WindowHistoryStore } from "./windowHistoryStore.js";
 const HORIZONS: PredictionHorizon[] = ["5m", "15m", "1h"];
 const DEFAULT_POLYMARKET: PolymarketConfig = {
   enabled: true,
-  historyLimit: 50,
+  historyLimit: 4100,
   historyPath: "data/polymarket-windows.json",
   syncIntervalSeconds: 30,
   indicatorSnapshotsPath: "data/indicator-snapshots.json",
-  indicatorSnapshotLimit: 500,
+  indicatorSnapshotLimit: 5800,
 };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -313,7 +313,14 @@ export class WindowHistoryService {
   private async backfill(): Promise<void> {
     for (const horizon of HORIZONS) {
       const slugs = buildRecentSlugs(horizon, this.config.historyLimit);
-      const entries = slugs.map((slug) => ({ slug, horizon }));
+      const existingSlugs = new Set(
+        this.store.getWindows(horizon)[horizon].map((row) => row.slug)
+      );
+      const missingSlugs = slugs.filter((slug) => !existingSlugs.has(slug));
+      if (missingSlugs.length === 0) continue;
+
+      console.log(`Polymarket backfill ${horizon}: fetching ${missingSlugs.length} windows...`);
+      const entries = missingSlugs.map((slug) => ({ slug, horizon }));
       const markets = await this.client.fetchMarketsForSlugs(entries, 150);
 
       for (const market of markets) {

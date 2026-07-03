@@ -20,11 +20,11 @@ export const DEFAULT_CONFIG_PATH = join(__dirname, "../../../config/default.yaml
 
 const DEFAULT_POLYMARKET = {
   enabled: true,
-  historyLimit: 50,
+  historyLimit: 4100,
   historyPath: "data/polymarket-windows.json",
   syncIntervalSeconds: 30,
   indicatorSnapshotsPath: "data/indicator-snapshots.json",
-  indicatorSnapshotLimit: 500,
+  indicatorSnapshotLimit: 5800,
 };
 
 export function normalizeConfig(config: AppConfig): AppConfig {

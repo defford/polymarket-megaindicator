@@ -141,8 +141,10 @@ agreementRules:
 
 polymarket:
   enabled: true
-  historyLimit: 50
+  # 2 weeks: 5m = 12/hr × 336hr ≈ 4032 windows (limiting horizon)
+  historyLimit: 4100
   historyPath: data/polymarket-windows.json
   syncIntervalSeconds: 30
   indicatorSnapshotsPath: data/indicator-snapshots.json
-  indicatorSnapshotLimit: 500
+  # 2 weeks across all horizons: (12+4+1)/hr × 336hr ≈ 5712 snapshots
+  indicatorSnapshotLimit: 5800
