@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { PredictionDirection, PredictionHorizon, Timeframe } from "../types/analysis.js";
 import type { IndicatorSnapshotStoreData, SimpleAction, WindowIndicatorSnapshot } from "../types/indicatorSnapshots.js";
-import type { PolymarketOutcome, PolymarketStoreData } from "../types/polymarket.js";
+import type { PolymarketOutcome, PolymarketStoreData, PolymarketWindowResult } from "../types/polymarket.js";
 import { ALL_INDICATOR_IDS } from "../services/technicals.js";
 import { GAUGE_IDS } from "../services/polymarket/buildIndicatorSnapshot.js";
 
@@ -10,6 +10,8 @@ export const DEFAULT_HORIZON_TIMEFRAMES: Record<PredictionHorizon, Timeframe[]> 
   "15m": ["5m", "15m", "30m"],
   "1h": ["15m", "30m", "1h"],
 };
+
+const HORIZONS: PredictionHorizon[] = ["5m", "15m", "1h"];
 
 export interface SignalRef {
   timeframe: Timeframe;
@@ -24,6 +26,23 @@ export interface ScoredWindow {
   snapshot: WindowIndicatorSnapshot;
 }
 
+export type ComboWindowOutcome = "correct" | "wrong" | "no_edge";
+
+export interface ComboWindowSignal {
+  key: string;
+  action: SimpleAction | null;
+}
+
+export interface ComboWindowResult {
+  slug: string;
+  horizon: PredictionHorizon;
+  windowStart: string;
+  outcome: PolymarketOutcome;
+  direction: PredictionDirection;
+  result: ComboWindowOutcome;
+  signals: ComboWindowSignal[];
+}
+
 export interface ComboResult {
   combo: SignalRef[];
   comboKey: string;
@@ -34,6 +53,24 @@ export interface ComboResult {
   noEdge: number;
   accuracy: number | null;
   coverage: number;
+}
+
+export interface ComboEvaluateResult {
+  summary: ComboResult;
+  windows: ComboWindowResult[];
+}
+
+export interface HorizonAnalysisStats {
+  resolvedTotal: number;
+  withSnapshot: number;
+  withoutSnapshot: number;
+}
+
+export interface AnalysisStats {
+  resolvedTotal: number;
+  withSnapshot: number;
+  withoutSnapshot: number;
+  byHorizon: Record<PredictionHorizon, HorizonAnalysisStats>;
 }
 
 export interface ComboSearchOptions {
@@ -99,26 +136,78 @@ export function loadScoredWindows(
 ): ScoredWindow[] {
   const windowsData = JSON.parse(readFileSync(windowsPath, "utf8")) as PolymarketStoreData;
   const snapshotsData = JSON.parse(readFileSync(snapshotsPath, "utf8")) as IndicatorSnapshotStoreData;
-  const snapshotBySlug = new Map(snapshotsData.snapshots.map((row) => [row.slug, row]));
 
-  const horizons: PredictionHorizon[] = horizon === "all" ? ["5m", "15m", "1h"] : [horizon];
+  const allWindows = HORIZONS.flatMap((h) => windowsData.windows[h]);
+  return buildScoredWindowsFromStores(allWindows, snapshotsData.snapshots, horizon);
+}
+
+export function buildScoredWindowsFromStores(
+  windows: PolymarketWindowResult[],
+  snapshots: WindowIndicatorSnapshot[],
+  horizon: PredictionHorizon | "all" = "all"
+): ScoredWindow[] {
+  const snapshotBySlug = new Map(snapshots.map((row) => [row.slug, row]));
+  const horizons: PredictionHorizon[] = horizon === "all" ? HORIZONS : [horizon];
   const scored: ScoredWindow[] = [];
 
-  for (const h of horizons) {
-    for (const row of windowsData.windows[h]) {
-      if (!row.resolved || !row.outcome) continue;
-      const snapshot = snapshotBySlug.get(row.slug);
-      if (!snapshot) continue;
-      scored.push({
-        slug: row.slug,
-        horizon: row.horizon,
-        outcome: row.outcome,
-        snapshot,
-      });
-    }
+  for (const row of windows) {
+    if (!horizons.includes(row.horizon)) continue;
+    if (!row.resolved || !row.outcome) continue;
+    const snapshot = snapshotBySlug.get(row.slug);
+    if (!snapshot) continue;
+    scored.push({
+      slug: row.slug,
+      horizon: row.horizon,
+      outcome: row.outcome,
+      snapshot,
+    });
   }
 
-  return scored;
+  return scored.sort(
+    (a, b) => new Date(b.snapshot.windowStart).getTime() - new Date(a.snapshot.windowStart).getTime()
+  );
+}
+
+export function getAnalysisStats(
+  windows: PolymarketWindowResult[],
+  snapshots: WindowIndicatorSnapshot[],
+  horizon?: PredictionHorizon | "all"
+): AnalysisStats {
+  const snapshotSlugs = new Set(snapshots.map((row) => row.slug));
+  const horizons: PredictionHorizon[] =
+    horizon && horizon !== "all" ? [horizon] : HORIZONS;
+
+  const byHorizon = {} as Record<PredictionHorizon, HorizonAnalysisStats>;
+  let resolvedTotal = 0;
+  let withSnapshot = 0;
+
+  for (const h of horizons) {
+    let horizonResolved = 0;
+    let horizonWithSnapshot = 0;
+
+    for (const row of windows) {
+      if (row.horizon !== h || !row.resolved || !row.outcome) continue;
+      horizonResolved++;
+      if (snapshotSlugs.has(row.slug)) {
+        horizonWithSnapshot++;
+      }
+    }
+
+    byHorizon[h] = {
+      resolvedTotal: horizonResolved,
+      withSnapshot: horizonWithSnapshot,
+      withoutSnapshot: horizonResolved - horizonWithSnapshot,
+    };
+    resolvedTotal += horizonResolved;
+    withSnapshot += horizonWithSnapshot;
+  }
+
+  return {
+    resolvedTotal,
+    withSnapshot,
+    withoutSnapshot: resolvedTotal - withSnapshot,
+    byHorizon,
+  };
 }
 
 function collectCandidateSignals(
@@ -157,24 +246,10 @@ export function evaluateCombo(windows: ScoredWindow[], combo: SignalRef[]): Comb
   let noEdge = 0;
 
   for (const window of windows) {
-    const actions = combo
-      .map((ref) => getSignalAction(window.snapshot, ref))
-      .filter((action): action is SimpleAction => action != null);
-
-    if (actions.length === 0) {
-      noEdge++;
-      continue;
-    }
-
-    const direction = majorityVote(actions);
-    const match = outcomeMatches(direction, window.outcome);
-    if (match == null) {
-      noEdge++;
-    } else if (match) {
-      correct++;
-    } else {
-      wrong++;
-    }
+    const result = scoreWindowCombo(window, combo);
+    if (result === "correct") correct++;
+    else if (result === "wrong") wrong++;
+    else noEdge++;
   }
 
   const directional = correct + wrong;
@@ -190,6 +265,59 @@ export function evaluateCombo(windows: ScoredWindow[], combo: SignalRef[]): Comb
     noEdge,
     accuracy: directional > 0 ? correct / directional : null,
     coverage: windows.length > 0 ? directional / windows.length : 0,
+  };
+}
+
+function scoreWindowCombo(window: ScoredWindow, combo: SignalRef[]): ComboWindowOutcome {
+  const actions = combo
+    .map((ref) => getSignalAction(window.snapshot, ref))
+    .filter((action): action is SimpleAction => action != null);
+
+  if (actions.length === 0) return "no_edge";
+
+  const direction = majorityVote(actions);
+  const match = outcomeMatches(direction, window.outcome);
+  if (match == null) return "no_edge";
+  return match ? "correct" : "wrong";
+}
+
+export function evaluateComboWindows(
+  windows: ScoredWindow[],
+  combo: SignalRef[]
+): ComboWindowResult[] {
+  return windows.map((window) => {
+    const signals: ComboWindowSignal[] = combo.map((ref) => ({
+      key: ref.key,
+      action: getSignalAction(window.snapshot, ref) ?? null,
+    }));
+    const actions = signals
+      .map((signal) => signal.action)
+      .filter((action): action is SimpleAction => action != null);
+    const direction =
+      actions.length === 0 ? "NO_EDGE" : majorityVote(actions);
+    const match = outcomeMatches(direction, window.outcome);
+    const result: ComboWindowOutcome =
+      match == null ? "no_edge" : match ? "correct" : "wrong";
+
+    return {
+      slug: window.slug,
+      horizon: window.horizon,
+      windowStart: window.snapshot.windowStart,
+      outcome: window.outcome,
+      direction,
+      result,
+      signals,
+    };
+  });
+}
+
+export function evaluateComboDetailed(
+  windows: ScoredWindow[],
+  combo: SignalRef[]
+): ComboEvaluateResult {
+  return {
+    summary: evaluateCombo(windows, combo),
+    windows: evaluateComboWindows(windows, combo),
   };
 }
 
@@ -271,4 +399,19 @@ export function parseSignalKeys(value: string | undefined): SignalRef[] {
     .split(",")
     .map((part) => parseSignalKey(part.trim()))
     .filter((ref): ref is SignalRef => ref != null);
+}
+
+export function parseSignalKeysStrict(keys: string[]): SignalRef[] {
+  const refs: SignalRef[] = [];
+  for (const key of keys) {
+    const ref = parseSignalKey(key.trim());
+    if (!ref) {
+      throw new Error(`Invalid signal key: ${key}`);
+    }
+    refs.push(ref);
+  }
+  if (refs.length === 0) {
+    throw new Error("At least one signal key is required");
+  }
+  return refs;
 }

@@ -1,10 +1,19 @@
 import type {
+  AnalysisStats,
+  ComboEvaluateResult,
+  ComboSearchParams,
+  ComboSearchSummary,
+  ComboWindowsResponse,
+  IndicatorCatalog,
+} from "../types/analysis";
+import type {
   ConfigPreviewResult,
   ConfigSettings,
   ConfigSettingsResponse,
   PredictionHorizon,
   ProfilesResponse,
   Snapshot,
+  Timeframe,
 } from "../types";
 import type { PolymarketResultsResponse } from "../types/polymarket";
 
@@ -65,3 +74,49 @@ export function fetchPolymarketResults(horizon?: PredictionHorizon): Promise<Pol
 export function fetchProfiles(): Promise<ProfilesResponse> {
   return request<ProfilesResponse>("/api/profiles");
 }
+
+export function fetchAnalysisStats(horizon?: PredictionHorizon | "all"): Promise<AnalysisStats> {
+  const qs = horizon ? `?horizon=${encodeURIComponent(horizon)}` : "";
+  return request<AnalysisStats>(`/api/analysis/stats${qs}`);
+}
+
+export function fetchIndicatorCatalog(): Promise<IndicatorCatalog> {
+  return request<IndicatorCatalog>("/api/analysis/indicators");
+}
+
+export function searchCombos(params: ComboSearchParams = {}): Promise<ComboSearchSummary> {
+  const search = new URLSearchParams();
+  if (params.horizon) search.set("horizon", params.horizon);
+  if (params.maxSize != null) search.set("maxSize", String(params.maxSize));
+  if (params.minSamples != null) search.set("minSamples", String(params.minSamples));
+  if (params.top != null) search.set("top", String(params.top));
+  if (params.timeframes?.length) search.set("timeframes", params.timeframes.join(","));
+  const qs = search.toString();
+  return request<ComboSearchSummary>(`/api/analysis/combos${qs ? `?${qs}` : ""}`);
+}
+
+export function evaluateCombo(body: {
+  comboKeys: string[];
+  horizon?: PredictionHorizon | "all";
+}): Promise<ComboEvaluateResult> {
+  return request<ComboEvaluateResult>("/api/analysis/combos/evaluate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export function fetchComboWindows(
+  combo: string,
+  horizon?: PredictionHorizon | "all"
+): Promise<ComboWindowsResponse> {
+  const search = new URLSearchParams({ combo });
+  if (horizon) search.set("horizon", horizon);
+  return request<ComboWindowsResponse>(`/api/analysis/combos/windows?${search.toString()}`);
+}
+
+export const DEFAULT_HORIZON_TIMEFRAMES: Record<PredictionHorizon, Timeframe[]> = {
+  "5m": ["1m", "5m", "15m"],
+  "15m": ["5m", "15m", "30m"],
+  "1h": ["15m", "30m", "1h"],
+};

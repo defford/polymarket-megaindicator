@@ -5,6 +5,25 @@ import { HYPOTHESIS_PROFILE_IDS } from "../../config/hypothesisProfiles.js";
 import type { DataService } from "../dataService.js";
 import { computeAllProfilePredictions } from "../profileEngine.js";
 import { sleep } from "../tradingViewClient.js";
+import {
+  buildScoredWindowsFromStores,
+  evaluateComboDetailed,
+  getAnalysisStats,
+  parseSignalKeysStrict,
+  searchIndicatorCombos,
+  type AnalysisStats,
+  type ComboEvaluateResult,
+  type ComboSearchOptions,
+  type ComboSearchSummary,
+  type ComboWindowResult,
+} from "../../analysis/comboSearch.js";
+import {
+  MA_INDICATOR_IDS,
+  MA_LABELS,
+  OSCILLATOR_INDICATOR_IDS,
+  OSCILLATOR_LABELS,
+} from "../technicals.js";
+import { GAUGE_IDS } from "./buildIndicatorSnapshot.js";
 import type {
   HypothesisProfileId,
   PolymarketConfig,
@@ -224,6 +243,88 @@ export class WindowHistoryService {
       activeWindows,
       updatedAt: this.store.getUpdatedAt(),
     };
+  }
+
+  private getAllWindows(): PolymarketWindowResult[] {
+    const stored = this.store.getWindows();
+    return [...stored["5m"], ...stored["15m"], ...stored["1h"]];
+  }
+
+  private getScoredWindows(horizon: PredictionHorizon | "all" = "all") {
+    return buildScoredWindowsFromStores(
+      this.getAllWindows(),
+      this.snapshotStore.getAll(),
+      horizon
+    );
+  }
+
+  getAnalysisStats(horizon?: PredictionHorizon | "all"): AnalysisStats {
+    return getAnalysisStats(
+      this.getAllWindows(),
+      this.snapshotStore.getAll(),
+      horizon
+    );
+  }
+
+  getIndicatorCatalog() {
+    const timeframes = this.configManager.getConfig().timeframes;
+    const gaugeLabels: Record<string, string> = {
+      summary: "Summary Gauge",
+      oscillators: "Oscillators Gauge",
+      moving_averages: "Moving Averages Gauge",
+    };
+
+    return {
+      timeframes,
+      oscillators: OSCILLATOR_INDICATOR_IDS.map((id) => ({
+        id,
+        label: OSCILLATOR_LABELS[id] ?? id,
+        category: "oscillator" as const,
+      })),
+      movingAverages: MA_INDICATOR_IDS.map((id) => ({
+        id,
+        label: MA_LABELS[id] ?? id,
+        category: "moving_average" as const,
+      })),
+      gauges: GAUGE_IDS.map((id) => ({
+        id,
+        label: gaugeLabels[id] ?? id,
+        category: "gauge" as const,
+      })),
+    };
+  }
+
+  searchCombos(options: ComboSearchOptions = {}): ComboSearchSummary {
+    const horizon = options.horizon ?? "all";
+    const scored = this.getScoredWindows(horizon);
+    if (scored.length === 0) {
+      return {
+        resolvedWindows: 0,
+        snapshotsMatched: 0,
+        candidateSignals: 0,
+        combosEvaluated: 0,
+        results: [],
+      };
+    }
+    return searchIndicatorCombos(scored, options);
+  }
+
+  evaluateComboByKeys(
+    comboKeys: string[],
+    horizon: PredictionHorizon | "all" = "all"
+  ): ComboEvaluateResult {
+    const combo = parseSignalKeysStrict(comboKeys);
+    const scored = this.getScoredWindows(horizon);
+    return evaluateComboDetailed(scored, combo);
+  }
+
+  getComboWindowBreakdown(
+    comboKeys: string[],
+    horizon: PredictionHorizon | "all" = "all"
+  ): ComboWindowResult[] {
+    const combo = parseSignalKeysStrict(comboKeys);
+    const scored = this.getScoredWindows(horizon);
+    return evaluateComboDetailed(scored, combo).windows;
   }
 
   private maybeCaptureIndicatorSnapshot(
